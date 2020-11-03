@@ -1,0 +1,4 @@
+<authentication-manager alias="authenticationManager">
+    <authentication-provider ref="daoAuthenticationProvider"/>
+<!-- other providers if any -->
+</authentication-manager>

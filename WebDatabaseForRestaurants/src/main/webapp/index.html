@@ -1,0 +1,603 @@
+<html>
+	<meta charset="UTF-8">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous"></script>
+
+<style>
+body{
+	margin-top: 10px;
+	margin-left: 80px;
+	margin-right: 80px;
+	padding: 10px;
+	background-image: url("/images/restaurant1.jpg");
+	background-color: #cccccc;
+}
+
+#logo{
+	mix-blend-mode: multiply;
+}
+
+
+table{
+	font-family: Arial,sans-serif;
+	border-collapse: collapse;
+	width: 70%;
+	background-color: #292b2c;
+	color: white;
+}
+table, th, td ,tr{
+  border: 3px solid #292f2f;
+;
+}
+td,th {
+	padding: 8px;
+	text-align: center;
+}
+
+th {
+	font-weight: bold;
+	text-transform:  uppercase;
+	color: #fff;
+}
+
+td {
+	text-align: center;
+	color: white;
+}
+
+.nav{
+	background-color: #292b2c;
+	margin-bottom: 30px;
+	font-size: 20;
+	color: white;
+}
+
+.topnav button {
+  float: left;
+  color: #f2f2f2;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+.signIn{
+	display: none;
+}
+.editRestaurantDiv{
+	padding-bottom: 20px;
+}
+.editRestaurant {
+	display: none;
+}
+.editDiv{
+	background-color: #292b2c ;
+	color: white;
+	padding-bottom: 20px;
+	padding-top: 20px;
+}
+.registerClass{
+	display: none;
+}
+
+.nav > li {
+  margin-right: 15px;
+}
+.nav>ul{
+	margin: 0px;
+}
+.logInDiv{
+	margin-top: 10px;
+	margin-bottom: 30px;
+}
+
+#resetSearch{
+	display: none;
+}
+
+</style>
+
+<script>
+
+const headers = ["name","address","working hours"];
+
+var data = [];    		
+
+window.onload = () => {	
+	checkToken();
+}
+
+function checkToken(){
+	if(sessionStorage.getItem("Cookie") != null){
+		const Http = new XMLHttpRequest();
+		const url='http://localhost:8080/user/checkToken';
+		Http.open("GET", url);
+		Http.setRequestHeader("Authorization", sessionStorage.getItem("Cookie"));
+		Http.send();
+
+		Http.onreadystatechange = (e) => {
+			if(Http.readyState == 4) {
+				if(Http.status == 200){
+					sessionStorage.setItem("Logged","true");
+					setNavBar(true,Http.responseText);
+				}
+				if(Http.status > 399){
+					sessionStorage.clear();
+					setNavBar(false);
+				}
+				
+				findAll();
+			}
+		}		
+	}else{
+		sessionStorage.setItem("Logged","false");
+		setNavBar(false);
+		findAll();
+	}
+}
+
+function signIn(){
+	var username = document.getElementById("username").value;
+	var password = document.getElementById("password").value;
+
+	if(username.length = 0 || password.length == 0){
+		alert("Input username and password!");
+	}
+	saveSignIn(username,password);
+}
+
+function signOut(){
+
+	sessionStorage.removeItem("Cookie");
+	sessionStorage.setItem("Logged",false);
+	findAll();
+	setNavBar(false);
+
+}
+
+function setNavBar(logged,username){
+
+	if(logged){
+		changeDisplay("registerBtn",'none');
+		changeDisplay("signInBtn",'none');
+		changeDisplay("logOutBtn",'inline');
+		document.getElementById("usernameNavbar").innerHTML = username;
+	}
+	else{
+		changeDisplay("registerBtn",'inline');
+		changeDisplay("signInBtn",'inline');
+		changeDisplay("logOutBtn",'none');
+		document.getElementById("usernameNavbar").innerHTML = "";
+	}
+}
+
+function saveSignIn(username,password){
+	var xhr = new XMLHttpRequest();
+	var url = "http://localhost:8080/login";
+	xhr.open("POST", url, true);
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState == 4 && xhr.status == 200) {
+			sessionStorage.setItem("Cookie",xhr.getResponseHeader("Authorization"));
+			$('#modalLoginForm').modal('hide');
+			$('#modalRegForm').modal('hide');
+			checkToken();
+			findAll();
+		}
+		if(xhr.readyState == 4 && xhr.status == 403){
+			alert("Wrong username or password!");
+		}
+	};
+	var data = JSON.stringify({"username": username, "password": password});
+	xhr.send(data);
+}
+
+function saveRegister(){
+
+var xhr = new XMLHttpRequest();
+var url = "http://localhost:8080/user/save";
+xhr.open("POST", url, true);
+xhr.setRequestHeader("Authorization",sessionStorage.getItem("Cookie"));
+xhr.setRequestHeader("Content-Type", "application/json");
+xhr.onreadystatechange = function () {
+	if(xhr.readyState == 4){
+		if(xhr.status == 200){
+			user = JSON.parse(xhr.responseText);
+			saveSignIn(user.username,password);
+		}
+		if(xhr.status == 400){
+			alert(JSON.parse(xhr.responseText).message);			}
+	}
+	
+};
+
+const name = document.getElementById("nameReg").value;
+const email = document.getElementById("emailReg").value;
+const username = document.getElementById("usernameReg").value;
+const password = document.getElementById("passwordReg").value;
+
+var data = JSON.stringify({"name":name,"username":username,"email":email,"password":password});
+xhr.send(data);
+
+
+}
+
+function findAll(){
+	const Http = new XMLHttpRequest();
+	const url='http://localhost:8080/restaurant/all';
+	Http.open("GET", url);
+	Http.setRequestHeader("Authorization",sessionStorage.getItem("Cookie"));
+	Http.send();
+
+	Http.onreadystatechange = (e) => {
+		if(Http.readyState == 4) {
+			if(Http.status == 200){
+				data = JSON.parse(Http.responseText);
+				printTable(data);
+			}
+			else
+				alert("Problem with server.");
+		}
+	}	
+}
+
+function findRestaurantById(id){
+	for(d of data){
+		if(d.id == id){
+			return d;
+		}
+	}
+	return -1;
+}
+
+function printTable(data){
+	if(data.length == 0){
+		const tableBody = document.getElementById('tableData').innerHTML = "";
+		return;
+	}
+
+	loadHeaderForTable(data);
+
+	loadDataInTable(data)
+
+}
+
+function loadHeaderForTable(data){
+	const tabelHeader = document.getElementById("tableHeader")
+	let thHtml = '';
+	for(let h of headers){
+		thHtml+= '<th>' + h + '</th>';
+	}
+	if( data[0].lastChange != null){ //  admin is logged
+		thHtml+= '<th>Last Change</th>';		
+	}
+	tabelHeader.innerHTML = thHtml;
+}
+
+function loadDataInTable(data){
+	const tableBody = document.getElementById('tableData');
+	let dataHtml = '';
+	for(let r of data){
+		var start = r.startTime + '';
+		var end = r.endTime + '';
+		dataHtml+='<tr><td>' + r.name + '</td><td>' + r.address + '</td><td>' + start.substr(0,start.length-3) 
+					+ ' - ' + end.substr(0,end.length-3)
+					+ '</td>';
+		if(r.lastChange != null){
+			dataHtml+= '<td>' + r.lastChange + '</td>';
+		}
+		dataHtml+= '<td><button class = "btn btn-outline-info" onclick = "edit(this.id)" id = "' + r.id + '">Edit</button></td><td><button class = "btn btn-outline-danger" onclick = "remove(this.id)" id = "' + r.id + '">Remove</button></td></tr>';
+	}
+	tableBody.innerHTML = dataHtml;
+}
+																												
+function changeDisplay(id,display){
+	var div = document.getElementById(id).style.display = display;
+}
+
+function remove(id){
+	if(sessionStorage.getItem("Cookie") == null){
+		alert("You must be sign in to edit!");
+		return;
+	}
+
+	var xhr = new XMLHttpRequest();
+	var url = "http://localhost:8080/restaurant/delete/"+ id;
+	xhr.open("POST", url, true);
+	xhr.setRequestHeader("Authorization",sessionStorage.getItem("Cookie"));
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.send();
+	xhr.onreadystatechange = function () {
+		if(xhr.readyState == 4){
+
+			if (xhr.status == 200) {
+				alert("Restaurant has been removed!");
+				findAll();  									
+			}
+
+			if(xhr.status == 400){
+				alert(JSON.parse(xhr.responseText).message);
+			}
+		}
+		
+		
+	};
+
+
+
+}
+
+function edit(id){
+	
+	if(sessionStorage.getItem("Cookie") == null){
+		alert("You must be sign in!");
+		return;
+	}
+
+	window.scrollTo({
+  		top: 0,
+  		left: 0,
+  		behavior: 'smooth'
+	});
+	changeDisplay('editRestaurantId','block');
+
+	if(id != null){
+		const restaurant = findRestaurantById(id);
+		var saveBtn = document.getElementById("saveEdit").onclick = function(){ saveEdit("http://localhost:8080/restaurant/edit/" + id,id); }
+
+		document.getElementById("nameEdit").value = restaurant.name;
+		document.getElementById("addressEdit").value = restaurant.address;
+		document.getElementById("startEdit").value = restaurant.startTime;
+		document.getElementById("endEdit").value = restaurant.endTime;
+	}
+	else{
+		document.getElementById("nameEdit").value = "";
+		document.getElementById("addressEdit").value = "";
+		document.getElementById("startEdit").value = "";
+		document.getElementById("endEdit").value = "";
+		document.getElementById("saveEdit").onclick = function(){ saveEdit("http://localhost:8080/restaurant/save/",null); }
+	}
+}
+
+function saveEdit(URL,id){
+
+	var xhr = new XMLHttpRequest();
+	var url = URL;
+	xhr.open("POST", url, true);
+	xhr.setRequestHeader("Authorization",sessionStorage.getItem("Cookie"));
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.onreadystatechange = function () {
+		if(xhr.readyState == 4){
+
+			if (xhr.status == 200) {
+				alert("Item has been saved.");
+				changeDisplay("editRestaurantId",'none');
+				findAll();
+			}
+
+			if(xhr.status == 400){
+				alert(JSON.parse(xhr.responseText).message);
+			}
+		}
+		
+		
+	};
+
+	const startTime = (document.getElementById("startEdit").value + ":00").substr(0,8); // input type time change format from HH:MM to HH:MM:SS sometime, and sometime doesn't
+	const endTime = (document.getElementById("endEdit").value + ":00").substr(0,8);
+
+	
+
+	var data = JSON.stringify({"id":id,"name":document.getElementById("nameEdit").value, "address":document.getElementById("addressEdit").value,
+								"startTime":startTime ,"endTime":endTime});
+	xhr.send(data);
+}
+
+function search(){
+
+	const search = document.getElementById("search").value;
+	
+	if(search.trim() == ""){
+		alert("Search bar is empty!");
+		return;
+	}
+
+	const http = new XMLHttpRequest();
+	http.open("GET", "http://localhost:8080/restaurant/search = " + search, true);
+	http.setRequestHeader("Authorization",sessionStorage.getItem("Cookie"));
+	http.setRequestHeader("Content-Type", "application/json");
+	http.send();
+
+	http.onreadystatechange = function () {
+		if(http.readyState == 4){
+			if (http.status == 200) {
+				data = JSON.parse(http.responseText);
+				printTable(data);
+				changeDisplay("resetSearch","inline");
+			}
+		}
+	};
+}
+
+function resetSearch(){
+	findAll();
+	changeDisplay("resetSearch",'none');
+	document.getElementById("search").value = "";
+}
+
+</script>
+
+<body>
+
+
+<!-- Nav bar-->
+<nav class="nav navbar" id="nav">
+	
+		<img src="/images/logo2.jpg" id = "logo" alt="Restaurants Info" width="70"  loading="lazy">
+	  	
+	<ul class="nav navrbar search justify-content-center">
+		<li>
+			<input class="form-control" type="search" id="search" placeholder="Search by name">
+		</li>
+		<li>
+			<button class="btn btn-outline-success" onclick="search()">Search</button>
+		</li>
+		<li>
+			<button type="button" id="resetSearch" class="btn btn-outline-danger btn-sm" onclick="resetSearch()">Reset</button>
+		</li>
+	</ul>
+
+	<ul class="nav navbar">
+		
+		<li>
+			<button class="btn btn-outline-success" id="addRestaurantBtn" onclick="edit(null)">Add restaurant</button>
+		</li>
+		<li class="nav-item">
+			<div id="usernameNavbar"></div>
+		</li>
+		<li class="nav-item">
+			<button class="btn btn-outline-info" id="signInBtn" data-toggle="modal" data-target="#modalLoginForm">Log in</button>
+		</li>
+		<li class="nav-item">
+			<button class="btn btn-outline-info" id="logOutBtn" onclick="signOut()">Log out</button>
+		</li>
+		<li class="nav-item">
+			<button class="btn btn-outline-danger" id="registerBtn" data-toggle="modal" data-target="#modalRegForm">Sign up</button>
+		</li>
+	</ul>
+</nav>
+
+<!-- Log in popup-->
+<div class="modal fade" id="modalLoginForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Sign in</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <i class="fas fa-envelope prefix grey-text"></i>
+          <input type="text" id="username" class="form-control">
+          <label>Your username</label>
+        </div>
+
+        <div class="md-form mb-4">
+          <i class="fas fa-lock prefix grey-text"></i>
+          <input type="password" id="password" class="form-control">
+          <label data-error="wrong" data-success="right" for="defaultForm-pass">Your password</label>
+        </div>
+
+      </div>
+      <div class="modal-footer d-flex justify-content-center">
+        <button class="btn btn-outline-info" onclick="signIn()">Login</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Register popup-->
+<div class="modal fade" id="modalRegForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+	  <div class="modal-content">
+		<div class="modal-header text-center">
+		  <h4 class="modal-title w-100 font-weight-bold">Sign up</h4>
+		  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+			<span aria-hidden="true">&times;</span>
+		  </button>
+		</div>
+		<div class="modal-body mx-3">
+			<div class="md-form mb-5">
+			  <i class="fas fa-envelope prefix grey-text"></i>
+			  <input type="text" id="nameReg" class="form-control">
+			  <label>Your name</label>
+			</div>
+		
+			<div class="md-form mb-5">
+			  <i class="fas fa-envelope prefix grey-text"></i>
+			  <input type="email" id="emailReg" class="form-control">
+			  <label>Your email</label>
+			</div>
+		
+		  <div class="md-form mb-5">
+			<i class="fas fa-envelope prefix grey-text"></i>
+			<input type="text" id="usernameReg" class="form-control">
+			<label>Your username</label>
+		  </div>
+  
+		<div class="md-form mb-4">
+			<i class="fas fa-lock prefix grey-text"></i>
+			<input type="password" id="passwordReg" class="form-control">
+			<label data-error="wrong" data-success="right" for="defaultForm-pass">Your password</label>
+		  </div>
+  
+		
+		<div class="modal-footer d-flex justify-content-center">
+		  <button class="btn btn-outline-info" onclick="saveRegister()">Register</button>
+		</div>
+	 
+	</div>
+  </div>
+  </div>
+</div>
+
+<!-- Edit and add restaurant-->
+<div class="editRestaurantDiv">
+<form class="editRestaurant" id="editRestaurantId">
+	<div class="row">
+		<div class="col-4">
+		</div>
+		<div class="col 4 editDiv"> 
+			<div class="form-group">
+				<label>Name of restaurant</label>
+				<input type="text" class="form-control" id="nameEdit">
+			</div>
+			<div class="form-group">
+				<label>Address of restaurant</label>
+				<input type="text" class="form-control" id="addressEdit">
+			</div>
+			<div class="form-group">
+				<label>Start of working hours</label>
+				<input type="time" class="form-control" id="startEdit">
+			</div>
+			<div class="form-group">
+				<label>End of working hours</label>
+				<input type="time" class="form-control" id="endEdit">
+			</div>
+			<div class="row">
+				<div class="col-2"></div>
+				<div class="col-2">
+					<button class="btn btn-outline-info" id="saveEdit">Save</button>
+				</div>
+				<div class="col-3"></div>
+				<div class="col-2">
+					<button class="btn btn-outline-danger" id="signIn" onclick="changeDisplay('editRestaurantId','none')">Cancel</button>
+				</div>
+				<div class="col-2"></div>
+			</div>	
+		</div>
+		<div class="col-4"></div>
+	</div>	
+</form>
+</div>
+
+<!-- TABLE	-->
+<div class="d-flex justify-content-center">
+	<table class="table col-10 table-hover">
+		<tr id ="tableHeader">
+		<th>Name</th>
+		<th>Address</th>
+		<th>Working Hours</th>	
+		</tr>
+
+		<tbody id ="tableData"></tbody>
+
+</table>
+
+</body>
+
+</html>
